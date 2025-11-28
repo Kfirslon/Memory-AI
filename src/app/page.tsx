@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, BrainCircuit, Mic, Sparkles, User as UserIcon, LogOut, TrendingUp, History, Library } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { processAudio } from '@/lib/groq/client';
+import { uploadAudioToCloudinary } from '@/lib/cloudinary';
 import { Memory, MemoryCategory } from '@/lib/types';
 import AuthScreen from '@/components/AuthScreen';
 import RecordButton from '@/components/RecordButton';
@@ -143,7 +144,7 @@ export default function Home() {
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(chunksRef.current, { 
+                const audioBlob = new Blob(chunksRef.current, {
                     type: mimeType || 'audio/webm'
                 });
                 const recordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
@@ -180,16 +181,8 @@ export default function Home() {
             formData.append('audio', audioBlob, 'audio.webm');
             const result = await processAudio(formData);
 
-            // Upload audio to Supabase Storage
-            const fileName = `${user.id}/${Date.now()}.webm`;
-            const { error: uploadError } = await supabase.storage
-                .from('Memories')
-                .upload(fileName, audioBlob);
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL
-            const { data: urlData } = supabase.storage.from('Memories').getPublicUrl(fileName);
+            // Upload audio to Cloudinary (auto-converts to MP4 for iOS)
+            const { url: audioUrl } = await uploadAudioToCloudinary(audioBlob, user.id);
 
             // Calculate accurate duration from audio file metadata
             let audioDuration = recordingDuration; // Fallback to recording duration
@@ -223,8 +216,8 @@ export default function Home() {
                     content: result.transcription,
                     summary: result.summary,
                     category: result.category,
-                    audio_url: urlData.publicUrl,
-                    duration: Math.round(audioDuration * 10) / 10, // Round to 1 decimal place
+                    audio_url: audioUrl,
+                    duration: Math.round(audioDuration * 10) / 10,
                     is_favorite: false,
                     is_completed: false,
                 })
@@ -235,7 +228,7 @@ export default function Home() {
 
             setMemories((prev) => [data, ...prev]);
             toast('Memory saved successfully!');
-            setActiveTab('timeline'); // Switch to timeline to see the new memory
+            setActiveTab('timeline');
         } catch (error: any) {
             console.error('Processing error:', error);
             toast(error.message || 'Failed to process memory', 'error');

@@ -14,14 +14,7 @@ export default function AudioPlayer({ src }: AudioPlayerProps) {
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const [error, setError] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
-
-    useEffect(() => {
-        // Detect iOS
-        const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        setIsIOS(iOS);
-    }, []);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -97,18 +90,6 @@ export default function AudioPlayer({ src }: AudioPlayerProps) {
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
-
-    // Check if file is WebM and user is on iOS
-    const isWebM = src.includes('.webm');
-    if (isIOS && isWebM) {
-        return (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-2xl">
-                <div className="text-xs text-amber-700">
-                    ⚠️ Audio not supported on iOS Safari. Please use Chrome.
-                </div>
-            </div>
-        );
-    }
 
     if (error) {
         return (
