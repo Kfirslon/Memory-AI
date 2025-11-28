@@ -81,15 +81,60 @@ export default function Home() {
 
     const startRecording = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm',
-                audioBitsPerSecond: 128000 // 128kbps for better quality
-            });
+            // iOS Safari specific: Request permission more explicitly
+            const constraints = {
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    sampleRate: 44100
+                }
+            };
+
+            // First check if mediaDevices is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                toast('Microphone not available on this browser', 'error');
+                return;
+            }
+
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (permError) {
+                console.error('Permission error:', permError);
+                toast('Please allow microphone access in Settings → Safari → Microphone', 'error');
+                return;
+            }
+
+            // Check MediaRecorder support
+            if (!window.MediaRecorder) {
+                toast('Recording not supported. Please use Chrome instead.', 'error');
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
+            // Determine best audio format for iOS
+            let mimeType = 'audio/webm;codecs=opus';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'audio/webm';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    // iOS fallback
+                    mimeType = 'audio/mp4';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = ''; // Let browser decide
+                    }
+                }
+            }
+
+            const options = mimeType ? {
+                mimeType: mimeType,
+                audioBitsPerSecond: 128000
+            } : { audioBitsPerSecond: 128000 };
+
+            const mediaRecorder = new MediaRecorder(stream, options);
 
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
-            recordingStartTimeRef.current = Date.now(); // Track start time
+            recordingStartTimeRef.current = Date.now();
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -98,8 +143,10 @@ export default function Home() {
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const recordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000; // Convert to seconds
+                const audioBlob = new Blob(chunksRef.current, { 
+                    type: mimeType || 'audio/webm'
+                });
+                const recordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
                 await handleProcessing(audioBlob, recordingDuration);
                 stream.getTracks().forEach((track) => track.stop());
             };
