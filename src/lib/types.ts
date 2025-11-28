@@ -8,6 +8,7 @@ export interface Memory {
     summary: string;
     category: MemoryCategory;
     audio_url: string | null;
+    duration?: number | null;
     is_favorite: boolean;
     is_completed: boolean;
     created_at: string;

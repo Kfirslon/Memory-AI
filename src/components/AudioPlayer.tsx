@@ -5,10 +5,10 @@ import { Play, Pause } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface AudioPlayerProps {
-    audioUrl: string;
+    src: string;
 }
 
-export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
+export default function AudioPlayer({ src }: AudioPlayerProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -51,7 +51,7 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
 
     return (
         <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
-            <audio ref={audioRef} src={audioUrl} />
+            <audio ref={audioRef} src={src} />
 
             <button
                 onClick={togglePlay}

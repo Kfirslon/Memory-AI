@@ -35,6 +35,7 @@ export default function Home() {
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
+    const recordingStartTimeRef = useRef<number>(0);
     const supabase = createClient();
 
     useEffect(() => {
@@ -88,6 +89,7 @@ export default function Home() {
 
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
+            recordingStartTimeRef.current = Date.now(); // Track start time
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -97,7 +99,8 @@ export default function Home() {
 
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                await handleProcessing(audioBlob);
+                const recordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000; // Convert to seconds
+                await handleProcessing(audioBlob, recordingDuration);
                 stream.getTracks().forEach((track) => track.stop());
             };
 
@@ -117,7 +120,7 @@ export default function Home() {
         }
     };
 
-    const handleProcessing = async (audioBlob: Blob) => {
+    const handleProcessing = async (audioBlob: Blob, recordingDuration: number) => {
         try {
             if (audioBlob.size < 1000) {
                 toast('Recording too short', 'error');
@@ -141,7 +144,30 @@ export default function Home() {
             // Get public URL
             const { data: urlData } = supabase.storage.from('Memories').getPublicUrl(fileName);
 
-            // Save to database
+            // Calculate accurate duration from audio file metadata
+            let audioDuration = recordingDuration; // Fallback to recording duration
+            try {
+                audioDuration = await new Promise<number>((resolve, reject) => {
+                    const audio = new Audio();
+                    const objectUrl = URL.createObjectURL(audioBlob);
+
+                    audio.onloadedmetadata = () => {
+                        resolve(audio.duration);
+                        URL.revokeObjectURL(objectUrl);
+                    };
+
+                    audio.onerror = () => {
+                        URL.revokeObjectURL(objectUrl);
+                        reject(new Error('Failed to load audio metadata'));
+                    };
+
+                    audio.src = objectUrl;
+                });
+            } catch (metadataError) {
+                console.warn('Could not extract audio duration from metadata, using recording time:', metadataError);
+            }
+
+            // Save to database with duration
             const { data, error } = await supabase
                 .from('memories')
                 .insert({
@@ -151,6 +177,7 @@ export default function Home() {
                     summary: result.summary,
                     category: result.category,
                     audio_url: urlData.publicUrl,
+                    duration: Math.round(audioDuration * 10) / 10, // Round to 1 decimal place
                     is_favorite: false,
                     is_completed: false,
                 })

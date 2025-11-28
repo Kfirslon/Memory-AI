@@ -1,83 +1,35 @@
-'use client';
-
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Star, Trash2, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Memory } from '@/lib/types';
+import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle, Circle, Clock } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
 
 interface MemoryCardProps {
     memory: Memory;
     onToggleFavorite: (id: string) => void;
-    onToggleComplete: (id: string) => void;
+    onToggleComplete?: (id: string) => void;
     onDelete: (id: string) => void;
     onUpdate?: (id: string, updates: { title: string; content: string }) => void;
 }
 
-const categoryColors: Record<string, string> = {
-    task: 'bg-primary-500/10 text-primary-300 border border-primary-500/20',
-    reminder: 'bg-amber-500/10 text-amber-300 border border-amber-500/20',
-    idea: 'bg-accent-500/10 text-accent-300 border border-accent-500/20',
-    note: 'bg-slate-500/10 text-slate-300 border border-slate-500/20',
+const categoryColors = {
+    task: 'bg-blue-100 text-blue-700 border-blue-200',
+    reminder: 'bg-orange-100 text-orange-700 border-orange-200',
+    idea: 'bg-purple-100 text-purple-700 border-purple-200',
+    note: 'bg-emerald-100 text-emerald-700 border-emerald-200',
 };
 
-export default function MemoryCard({ memory, onToggleFavorite, onToggleComplete, onDelete, onUpdate }: MemoryCardProps) {
+const MemoryCard: React.FC<MemoryCardProps> = ({ memory, onToggleFavorite, onToggleComplete, onDelete, onUpdate }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editTitle, setEditTitle] = useState(memory.title);
-    const [editContent, setEditContent] = useState(memory.content);
 
-    const handleSave = () => {
-        if (onUpdate) {
-            onUpdate(memory.id, { title: editTitle, content: editContent });
-        }
-        setIsEditing(false);
-    };
+    const formattedDate = new Date(memory.created_at).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 
-    const handleCancel = () => {
-        setEditTitle(memory.title);
-        setEditContent(memory.content);
-        setIsEditing(false);
-    };
-
-    if (isEditing) {
-        return (
-            <motion.div
-                layout
-                className="glass-card rounded-3xl p-5 border-primary-500/50"
-            >
-                <div className="space-y-4">
-                    <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-white font-bold focus:outline-none focus:border-primary-500/50"
-                        placeholder="Title"
-                    />
-                    <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-slate-300 text-sm focus:outline-none focus:border-primary-500/50 min-h-[100px]"
-                        placeholder="Content"
-                    />
-                    <div className="flex justify-end gap-2">
-                        <button
-                            onClick={handleCancel}
-                            className="px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="px-4 py-2 rounded-xl text-sm font-medium bg-primary-600 text-white hover:bg-primary-500 transition-colors shadow-glow"
-                        >
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
-        );
-    }
+    const isTaskOrReminder = memory.category === 'task' || memory.category === 'reminder';
 
     return (
         <motion.div
@@ -85,108 +37,103 @@ export default function MemoryCard({ memory, onToggleFavorite, onToggleComplete,
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`glass-card rounded-3xl p-5 hover:border-primary-500/30 transition-all group ${memory.is_completed ? 'opacity-60' : ''
-                }`}
+            className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-100 overflow-hidden ${memory.is_completed ? 'opacity-70 grayscale-[0.5]' : ''}`}
         >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="flex-grow cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${categoryColors[memory.category]}`}>
-                            {memory.category.toUpperCase()}
+            <div className="p-5">
+                <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide border ${categoryColors[memory.category]}`}>
+                            {memory.category}
                         </span>
-                        {memory.is_favorite && (
-                            <Star size={14} className="text-amber-400" fill="currentColor" />
-                        )}
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <Calendar size={12} />
+                            {formattedDate}
+                        </span>
                     </div>
-                    <h3 className={`text-lg font-bold text-white mb-1 ${memory.is_completed ? 'line-through text-slate-500' : ''}`}>
-                        {memory.title}
-                    </h3>
-                    <p className="text-sm text-slate-400 line-clamp-2">{memory.summary}</p>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onToggleFavorite(memory.id); }}
+                            className={`p-2 rounded-full transition-colors ${memory.is_favorite ? 'text-yellow-400 hover:bg-yellow-50' : 'text-slate-300 hover:bg-slate-50 hover:text-slate-400'}`}
+                        >
+                            <Star size={18} fill={memory.is_favorite ? "currentColor" : "none"} />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                        onClick={() => onToggleFavorite(memory.id)}
-                        className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-                        title="Favorite"
-                    >
-                        <Star
-                            size={18}
-                            className={memory.is_favorite ? 'text-amber-400' : 'text-slate-500'}
-                            fill={memory.is_favorite ? 'currentColor' : 'none'}
-                        />
-                    </button>
-
-                    {(memory.category === 'task' || memory.category === 'reminder') && (
+                <div className="flex items-start gap-3">
+                    {/* Checkbox for tasks */}
+                    {isTaskOrReminder && onToggleComplete && (
                         <button
-                            onClick={() => onToggleComplete(memory.id)}
-                            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-                            title="Complete"
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onToggleComplete(memory.id); }}
+                            className={`flex-shrink-0 mt-1 transition-colors ${memory.is_completed ? 'text-green-500' : 'text-slate-300 hover:text-green-400'}`}
                         >
-                            <Check
-                                size={18}
-                                className={memory.is_completed ? 'text-emerald-400' : 'text-slate-500'}
-                                strokeWidth={3}
-                            />
+                            {memory.is_completed ? <CheckCircle size={24} fill="currentColor" className="text-white bg-green-500 rounded-full" /> : <Circle size={24} />}
                         </button>
                     )}
 
+                    <div className="flex-grow">
+                        <h3 className={`text-lg font-bold text-slate-800 mb-2 leading-tight ${memory.is_completed ? 'line-through text-slate-400' : ''}`}>
+                            {memory.title}
+                        </h3>
+
+                        <p className={`text-slate-600 text-sm leading-relaxed mb-4 ${memory.is_completed ? 'text-slate-400' : ''}`}>
+                            {memory.summary}
+                        </p>
+                    </div>
+                </div>
+
+                {memory.audio_url && (
+                    <div className="mb-3">
+                        <AudioPlayer src={memory.audio_url} />
+                        {memory.duration && (
+                            <div className="flex items-center gap-1 text-xs text-slate-400 mt-2 ml-1">
+                                <Clock size={12} />
+                                <span>{memory.duration.toFixed(1)}s duration</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
                     <button
-                        onClick={() => setIsEditing(true)}
-                        className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-                        title="Edit"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                     >
-                        <ChevronDown size={18} className="text-slate-500 hover:text-primary-400 rotate-90" />
+                        {isExpanded ? (
+                            <>Less <ChevronUp size={14} /></>
+                        ) : (
+                            <>View Transcript <ChevronDown size={14} /></>
+                        )}
                     </button>
 
                     <button
-                        onClick={() => onDelete(memory.id)}
-                        className="p-2 hover:bg-red-500/20 rounded-xl transition-colors"
-                        title="Delete"
+                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(memory.id); }}
+                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                     >
-                        <Trash2 size={18} className="text-slate-500 hover:text-red-400" />
+                        <Trash2 size={16} />
                     </button>
                 </div>
             </div>
 
-            {/* Audio Player */}
-            {memory.audio_url && isExpanded && (
-                <div className="mb-4">
-                    <AudioPlayer audioUrl={memory.audio_url} />
-                </div>
-            )}
-
-            {/* Expand / Collapse */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-center gap-1 text-xs text-slate-500 hover:text-primary-400 transition-colors py-1"
-            >
-                {isExpanded ? (
-                    <>
-                        <ChevronUp size={14} /> Show less
-                    </>
-                ) : (
-                    <>
-                        <ChevronDown size={14} /> Full transcript
-                    </>
+            <AnimatePresence>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-slate-50 px-5 border-t border-slate-100 overflow-hidden"
+                    >
+                        <div className="py-4">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Full Transcript</h4>
+                            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                {memory.content}
+                            </p>
+                        </div>
+                    </motion.div>
                 )}
-            </button>
-
-            {/* Expanded Content */}
-            <motion.div
-                initial={false}
-                animate={{ height: isExpanded ? 'auto' : 0 }}
-                className="overflow-hidden"
-            >
-                <div className="pt-4 border-t border-white/5 mt-2">
-                    <p className="text-sm text-slate-300 leading-relaxed">{memory.content}</p>
-                    <p className="text-xs text-slate-600 mt-3 font-mono">
-                        {new Date(memory.created_at).toLocaleString()}
-                    </p>
-                </div>
-            </motion.div>
+            </AnimatePresence>
         </motion.div>
     );
-}
+};
+
+export default MemoryCard;
