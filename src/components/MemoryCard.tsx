@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Memory } from '@/lib/types';
-import { Calendar, Tag, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
 
 interface MemoryCardProps {
@@ -9,6 +9,7 @@ interface MemoryCardProps {
     onToggleFavorite: (id: string) => void;
     onToggleComplete: (id: string) => void;
     onDelete: (id: string) => void;
+    onUpdate?: (id: string, updates: { title: string; content: string }) => void;
 }
 
 export default function MemoryCard({
@@ -16,6 +17,7 @@ export default function MemoryCard({
     onToggleFavorite,
     onToggleComplete,
     onDelete,
+    onUpdate,
 }: MemoryCardProps) {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
