@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
     try {
-        // Get user session (await createClient now)
+        // Get user session (NOW WITH AWAIT!)
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
