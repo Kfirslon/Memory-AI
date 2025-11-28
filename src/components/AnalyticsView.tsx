@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Target, Lightbulb, BarChart3 } from 'lucide-react';
 import { Memory } from '@/lib/types';
-import { generateHabitAnalysis } from '@/lib/groq/client';
 
 interface AnalyticsViewProps {
     memories: Memory[];
@@ -18,10 +17,31 @@ export default function AnalyticsView({ memories }: AnalyticsViewProps) {
         const fetchAnalysis = async () => {
             setLoading(true);
             try {
-                const result = await generateHabitAnalysis(memories);
+                const response = await fetch('/api/analytics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ memories }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch analysis');
+                }
+
+                const result = await response.json();
                 setAnalysis(result);
             } catch (error) {
                 console.error('Failed to generate analysis', error);
+                const totalTasks = memories.filter(m => m.category === 'task' || m.category === 'reminder').length;
+                const completed = memories.filter(m => m.is_completed).length;
+                const score = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 50;
+                
+                setAnalysis({
+                    pattern: "You're building a consistent habit.",
+                    suggestion: "Keep capturing your thoughts regularly!",
+                    productivityScore: score
+                });
             } finally {
                 setLoading(false);
             }
@@ -45,7 +65,6 @@ export default function AnalyticsView({ memories }: AnalyticsViewProps) {
 
     return (
         <div className="space-y-6 pb-32">
-            {/* Productivity Score */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +89,6 @@ export default function AnalyticsView({ memories }: AnalyticsViewProps) {
                 </div>
             </motion.div>
 
-            {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="glass-card rounded-3xl p-6 text-center">
                     <p className="text-sm text-slate-400 mb-2 font-medium uppercase tracking-wider">Total Memories</p>
@@ -82,7 +100,6 @@ export default function AnalyticsView({ memories }: AnalyticsViewProps) {
                 </div>
             </div>
 
-            {/* Category Breakdown */}
             <div className="glass-card rounded-3xl p-6">
                 <div className="flex items-center gap-2 mb-6">
                     <BarChart3 size={20} className="text-primary-400" />
@@ -111,7 +128,6 @@ export default function AnalyticsView({ memories }: AnalyticsViewProps) {
                 </div>
             </div>
 
-            {/* AI Insights */}
             {!loading && analysis && (
                 <>
                     <motion.div
