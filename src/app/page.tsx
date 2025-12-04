@@ -489,6 +489,30 @@ export default function Home() {
                                     <h2 className="text-2xl font-bold text-white mb-1">{user.email}</h2>
                                     <p className="text-primary-400 font-medium">Premium Member</p>
                                 </div>
+
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch('/api/create-checkout', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ userId: user.id }),
+                                            });
+                                            const data = await res.json();
+                                            if (data.url) {
+                                                window.location.href = data.url;
+                                            } else {
+                                                toast(data.error || 'Failed to create checkout', 'error');
+                                            }
+                                        } catch (error) {
+                                            toast('Failed to start checkout', 'error');
+                                        }
+                                    }}
+                                    className="w-full glass-card bg-gradient-to-r from-primary-600 to-cosmic-600 text-white font-bold py-4 rounded-2xl mb-4 flex items-center justify-center gap-2 hover:shadow-glow transition-all hover:scale-[1.02]"
+                                >
+                                    <Sparkles size={20} /> Upgrade to Premium
+                                </button>
+
                                 <button
                                     onClick={handleLogout}
                                     className="w-full glass-card border-red-500/20 text-red-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/10 transition-colors"
