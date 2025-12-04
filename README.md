@@ -141,3 +141,4 @@ Contributions welcome! Please open an issue or submit a PR.
 ## 💬 Support
 
 For issues or questions, see the [SETUP_GUIDE.md](./SETUP_GUIDE.md) or open an issue on GitHub.
+# Updated environment configuration
