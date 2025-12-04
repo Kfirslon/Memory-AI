@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 // Body parsing is disabled by reading the request stream/text directly.
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2020-08-27',
+    apiVersion: '2025-11-17.clover',
 });
 
 // Helper function to get the raw body
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Get the raw body buffer (essential for signature verification)
     const buf = await getRawBody(req);
-    
+
     let event: Stripe.Event;
 
     try {
