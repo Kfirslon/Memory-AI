@@ -367,7 +367,7 @@ export default function Home() {
     };
 
     if (!user) {
-        return <AuthScreen />;
+        return <AuthScreen onSuccess={() => { }} />;
     }
 
     return (
