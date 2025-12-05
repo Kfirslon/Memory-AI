@@ -330,6 +330,24 @@ export default function Home() {
         setMemories([]);
     };
 
+    const handleUpgrade = async () => {
+        try {
+            const response = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id }),
+            });
+
+            const { url } = await response.json();
+            if (url) {
+                window.location.href = url;
+            }
+        } catch (error) {
+            console.error('Upgrade error:', error);
+            toast('Failed to start upgrade process', 'error');
+        }
+    };
+
     if (!user) {
         return <AuthScreen />;
     }
@@ -550,6 +568,22 @@ export default function Home() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <button
+                                    onClick={handleUpgrade}
+                                    className="w-full glass-card border-primary-500/20 text-primary-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-500/10 transition-colors"
+                                >
+                                    <Sparkles size={20} />
+                                    Upgrade to Premium
+                                </button>
+
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full glass-card border-red-500/20 text-red-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/10 transition-colors"
+                                >
+                                    <LogOut size={20} />
+                                    Sign Out
+                                </button>
                             </motion.div>
                         )}
                     </AnimatePresence>
