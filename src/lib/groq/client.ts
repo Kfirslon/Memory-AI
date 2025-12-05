@@ -96,6 +96,23 @@ export async function processAudio(formData: FormData): Promise<ProcessingResult
 }
 
 /**
+ * Process manual text entry (without audio)
+ */
+export async function processManualEntry(text: string): Promise<ProcessingResult> {
+    if (!text || text.trim().length < 3) {
+        throw new Error('Text is too short');
+    }
+
+    // Use the existing processTranscription function
+    const intelligence = await processTranscription(text);
+
+    return {
+        transcription: text, // Use the input text as transcription
+        ...intelligence,
+    };
+}
+
+/**
  * Generate AI briefing for Focus view
  */
 export async function generateBriefing(memories: Memory[]): Promise<{ priorityIds: string[], analysis: string }> {

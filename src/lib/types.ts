@@ -9,6 +9,8 @@ export interface Memory {
     category: MemoryCategory;
     audio_url: string | null;
     duration?: number | null;
+    image_url?: string | null;
+    gcal_event_id?: string | null;
     is_favorite: boolean;
     is_completed: boolean;
     created_at: string;

@@ -102,6 +102,18 @@ export default function MemoryCard({
                         </div>
                     )}
 
+                    {/* Image Thumbnail */}
+                    {memory.image_url && (
+                        <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                            <img
+                                src={memory.image_url}
+                                alt="Memory attachment"
+                                className="w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(memory.image_url!, '_blank')}
+                            />
+                        </div>
+                    )}
+
                     <p className="text-slate-300 leading-relaxed mb-3">{memory.summary}</p>
 
                     {/* Tags */}
