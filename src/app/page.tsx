@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, BrainCircuit, Mic, Sparkles, User as UserIcon, LogOut, TrendingUp, History, Library, Edit3 } from 'lucide-react';
+import { Search, BrainCircuit, Mic, Sparkles, User as UserIcon, LogOut, Edit3 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { processAudio, processManualEntry } from '@/lib/groq/client';
 import { uploadAudioToCloudinary } from '@/lib/cloudinary';
@@ -27,16 +27,15 @@ const DAILY_PROMPTS = [
 
 export default function Home() {
     const [user, setUser] = useState<any>(null);
+    const [subscription, setSubscription] = useState<any>(null);
     const [memories, setMemories] = useState<Memory[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<MemoryCategory | 'all'>('all');
-
     const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [dailyPrompt, setDailyPrompt] = useState('');
     const [inputMode, setInputMode] = useState<InputMode>('voice');
-
     const [activeTab, setActiveTab] = useState<Tab>(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
@@ -58,24 +57,43 @@ export default function Home() {
             setUser(session?.user ?? null);
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
         });
 
         setDailyPrompt(DAILY_PROMPTS[Math.floor(Math.random() * DAILY_PROMPTS.length)]);
 
-        return () => subscription.unsubscribe();
+        return () => authSubscription.unsubscribe();
     }, []);
 
     useEffect(() => {
         if (user) {
             loadMemories();
+            loadSubscription();
         }
     }, [user]);
 
     const toast = (message: string, type: 'success' | 'error' = 'success') => {
         setShowToast({ message, type });
         setTimeout(() => setShowToast(null), 3000);
+    };
+
+    const loadSubscription = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('user_subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Failed to load subscription:', error);
+            } else {
+                setSubscription(data);
+            }
+        } catch (error) {
+            console.error('Failed to load subscription:', error);
+        }
     };
 
     const loadMemories = async () => {
@@ -113,12 +131,12 @@ export default function Home() {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
             } catch (permError) {
                 console.error('Permission error:', permError);
-                toast('Please allow microphone access in Settings → Safari → Microphone', 'error');
+                toast('Please allow microphone access', 'error');
                 return;
             }
 
             if (!window.MediaRecorder) {
-                toast('Recording not supported. Please use Chrome instead.', 'error');
+                toast('Recording not supported', 'error');
                 stream.getTracks().forEach(track => track.stop());
                 return;
             }
@@ -140,7 +158,6 @@ export default function Home() {
             } : { audioBitsPerSecond: 128000 };
 
             const mediaRecorder = new MediaRecorder(stream, options);
-
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
             recordingStartTimeRef.current = Date.now();
@@ -209,7 +226,7 @@ export default function Home() {
                     audio.src = objectUrl;
                 });
             } catch (metadataError) {
-                console.warn('Could not extract audio duration from metadata, using recording time:', metadataError);
+                console.warn('Could not extract audio duration, using recording time');
             }
 
             const { data, error } = await supabase
@@ -341,37 +358,26 @@ export default function Home() {
         setMemories([]);
     };
 
-    const handleUpdateMemory = async (id: string, updates: { title: string; content: string }) => {
-        try {
-            const { error } = await supabase
-                .from('memories')
-                .update(updates)
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setMemories(memories.map(m =>
-                m.id === id ? { ...m, ...updates } : m
-            ));
-        } catch (error) {
-            console.error('Error updating memory:', error);
-            alert('Failed to update memory');
-        }
-    };
-
     const handleUpgrade = async () => {
         try {
-            const response = await fetch('/api/create-checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id }),
-            });
+            const { data: { session } } = await supabase.auth.getSession();
 
-            const { url } = await response.json();
-            if (url) {
-                window.location.href = url;
-            }
-        } catch (error) {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-stripe-session`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`,
+                    },
+                }
+            );
+
+            const { url, error } = await response.json();
+
+            if (error) throw new Error(error);
+            if (url) window.location.href = url;
+        } catch (error: any) {
             console.error('Upgrade error:', error);
             toast('Failed to start upgrade process', 'error');
         }
@@ -380,6 +386,8 @@ export default function Home() {
     if (!user) {
         return <AuthScreen onSuccess={() => { }} />;
     }
+
+    const isPremium = subscription?.status === 'active';
 
     return (
         <div className="min-h-screen flex flex-col bg-cosmic-950">
@@ -499,10 +507,10 @@ export default function Home() {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                className="space-y-2"
+                                className="pt-4"
                             >
-                                <div className="space-y-2 sticky top-2 z-10 bg-cosmic-950/95 backdrop-blur-xl py-2 -mx-2 px-2 -mt-48">
-                                    <div className="relative w-full group mb-1">
+                                <div className="space-y-4 sticky top-20 z-10 bg-cosmic-950/95 backdrop-blur-xl pb-4">
+                                    <div className="relative w-full group">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-400 transition-colors" size={20} />
                                         <input
                                             type="text"
@@ -513,7 +521,7 @@ export default function Home() {
                                         />
                                     </div>
 
-                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
                                         {['all', 'task', 'reminder', 'idea', 'note'].map((cat) => (
                                             <button
                                                 key={cat}
@@ -529,7 +537,7 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pb-8 pt-48">
+                                <div className="space-y-4 pb-8">
                                     {filteredMemories.length === 0 ? (
                                         <div className="text-center py-16 text-slate-400">
                                             <p className="text-lg">No memories found</p>
@@ -544,7 +552,6 @@ export default function Home() {
                                                     onToggleFavorite={handleToggleFavorite}
                                                     onToggleComplete={handleToggleComplete}
                                                     onDelete={handleDelete}
-                                                    onUpdate={handleUpdateMemory}
                                                 />
                                             ))}
                                         </AnimatePresence>
@@ -572,7 +579,7 @@ export default function Home() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
-                                className="max-w-2xl mx-auto space-y-6"
+                                className="max-w-2xl mx-auto py-6 space-y-6"
                             >
                                 <div className="glass-card rounded-3xl p-8">
                                     <div className="flex items-center gap-4 mb-6">
@@ -582,7 +589,7 @@ export default function Home() {
                                         <div>
                                             <h2 className="text-2xl font-bold text-white">{user?.email}</h2>
                                             <p className="text-slate-400">
-                                                {user?.user_metadata?.subscription_status === 'premium' ? 'Premium Member' : 'Basic Member'}
+                                                {isPremium ? '✨ Premium Member' : 'Basic Member'}
                                             </p>
                                         </div>
                                     </div>
@@ -606,7 +613,7 @@ export default function Home() {
                                     className="w-full glass-card border-primary-500/20 text-primary-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-500/10 transition-colors"
                                 >
                                     <Sparkles size={20} />
-                                    Upgrade to Premium
+                                    {isPremium ? 'Manage Subscription' : 'Upgrade to Premium'}
                                 </button>
 
                                 <button
