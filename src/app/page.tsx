@@ -570,7 +570,9 @@ export default function Home() {
                                         </div>
                                         <div>
                                             <h2 className="text-2xl font-bold text-white">{user?.email}</h2>
-                                            <p className="text-slate-400">Memory Curator</p>
+                                            <p className="text-slate-400">
+                                                {user?.user_metadata?.subscription_status === 'premium' ? 'Premium Member' : 'Basic Member'}
+                                            </p>
                                         </div>
                                     </div>
 

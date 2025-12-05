@@ -40,9 +40,26 @@ export async function POST(req: NextRequest) {
     // Handle the event
     switch (event.type) {
         case 'checkout.session.completed':
-            // const session = event.data.object;
-            console.log('✅ Checkout Session Completed!');
-            // Implement your business logic here
+            const session = event.data.object as Stripe.Checkout.Session;
+            console.log('✅ Checkout Session Completed!', session.id);
+
+            if (session.metadata?.userId) {
+                const { createAdminClient } = await import('@/lib/supabase/admin');
+                const supabaseAdmin = createAdminClient();
+
+                const { error } = await supabaseAdmin.auth.admin.updateUserById(
+                    session.metadata.userId,
+                    { user_metadata: { subscription_status: 'premium' } }
+                );
+
+                if (error) {
+                    console.error('Error updating user subscription:', error);
+                } else {
+                    console.log('Successfully updated user subscription to premium');
+                }
+            } else {
+                console.error('No userId found in session metadata');
+            }
             break;
         // Handle other event types...
         default:
