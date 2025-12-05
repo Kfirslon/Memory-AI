@@ -30,5 +30,6 @@ export interface User {
     user_metadata?: {
         full_name?: string;
         avatar_url?: string;
+        subscription_status?: 'premium' | 'basic';
     };
 }
