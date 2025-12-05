@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const STRIPE_PRICE_ID = Deno.env.get("STRIPE_PRICE_ID");
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-11-17",
+    apiVersion: "2023-10-16",
 });
 
 const corsHeaders = {

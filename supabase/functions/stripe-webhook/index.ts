@@ -9,7 +9,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 console.log("🌍 Stripe Webhook is running...");
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-11-17",
+    apiVersion: "2023-10-16",
     httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -75,6 +75,12 @@ Deno.serve(async (req) => {
                 }
 
                 console.log("✅ Successfully updated user subscription to active");
+
+                // Sync to user_metadata for frontend access
+                await supabase.auth.admin.updateUserById(
+                    session.metadata?.userId as string,
+                    { user_metadata: { subscription_status: 'premium', stripe_customer_id: session.customer } }
+                );
                 break;
             }
 
