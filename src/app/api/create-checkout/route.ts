@@ -27,8 +27,8 @@ export async function POST(req: Request) {
                     quantity: 1,
                 },
             ],
-            success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}?success=true`,
-            cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}?canceled=true`,
+            success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}?success=true&tab=profile`,
+            cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}?canceled=true&tab=profile`,
             metadata: {
                 userId: userId,
             },

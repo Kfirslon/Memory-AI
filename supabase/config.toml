@@ -1,0 +1,4 @@
+project_id = "memory-ai"
+
+[functions.stripe-webhook]
+verify_jwt = false

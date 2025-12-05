@@ -32,10 +32,21 @@ export default function Home() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState<MemoryCategory | 'all'>('all');
-    const [activeTab, setActiveTab] = useState<Tab>('capture');
+
     const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [dailyPrompt, setDailyPrompt] = useState('');
     const [inputMode, setInputMode] = useState<InputMode>('voice');
+
+    const [activeTab, setActiveTab] = useState<Tab>(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const tabParam = params.get('tab');
+            if (tabParam && ['capture', 'timeline', 'focus', 'analytics', 'profile'].includes(tabParam)) {
+                return tabParam as Tab;
+            }
+        }
+        return 'capture';
+    });
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
