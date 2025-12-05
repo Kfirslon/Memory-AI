@@ -330,6 +330,24 @@ export default function Home() {
         setMemories([]);
     };
 
+    const handleUpdateMemory = async (id: string, updates: { title: string; content: string }) => {
+        try {
+            const { error } = await supabase
+                .from('memories')
+                .update(updates)
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setMemories(memories.map(m =>
+                m.id === id ? { ...m, ...updates } : m
+            ));
+        } catch (error) {
+            console.error('Error updating memory:', error);
+            alert('Failed to update memory');
+        }
+    };
+
     const handleUpgrade = async () => {
         try {
             const response = await fetch('/api/create-checkout', {
@@ -389,7 +407,7 @@ export default function Home() {
             </header>
 
             <div className="flex-grow overflow-hidden">
-                <main className="max-w-7xl mx-auto px-6 py-8 h-full overflow-y-auto">
+                <main className="max-w-7xl mx-auto px-6 pb-8 h-full overflow-y-auto">
                     <AnimatePresence mode="wait">
                         {activeTab === 'capture' && (
                             <motion.div
@@ -470,10 +488,10 @@ export default function Home() {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                className="space-y-6"
+                                className="space-y-2"
                             >
-                                <div className="space-y-4 sticky top-20 z-10 bg-cosmic-950/95 backdrop-blur-xl py-2 -mx-2 px-2">
-                                    <div className="relative w-full group">
+                                <div className="space-y-2 sticky top-2 z-10 bg-cosmic-950/95 backdrop-blur-xl py-2 -mx-2 px-2 -mt-48">
+                                    <div className="relative w-full group mb-1">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-400 transition-colors" size={20} />
                                         <input
                                             type="text"
@@ -500,7 +518,7 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pb-8">
+                                <div className="space-y-4 pb-8 pt-48">
                                     {filteredMemories.length === 0 ? (
                                         <div className="text-center py-16 text-slate-400">
                                             <p className="text-lg">No memories found</p>
@@ -515,6 +533,7 @@ export default function Home() {
                                                     onToggleFavorite={handleToggleFavorite}
                                                     onToggleComplete={handleToggleComplete}
                                                     onDelete={handleDelete}
+                                                    onUpdate={handleUpdateMemory}
                                                 />
                                             ))}
                                         </AnimatePresence>

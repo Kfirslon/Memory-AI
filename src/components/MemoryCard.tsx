@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Memory } from '@/lib/types';
-import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock, Pencil } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
 
 interface MemoryCardProps {
@@ -19,7 +19,8 @@ export default function MemoryCard({
     onDelete,
     onUpdate,
 }: MemoryCardProps) {
-    const [isExpanded, setIsExpanded] = React.useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const categoryColors = {
         task: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -56,9 +57,50 @@ export default function MemoryCard({
             className="glass-card rounded-3xl p-6 hover:shadow-xl transition-all duration-300"
         >
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+            <div>
+                {isEditing ? (
+                    <div className="mb-4 space-y-3">
+                        <input
+                            type="text"
+                            defaultValue={memory.title}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white font-bold text-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                            id={`edit-title-${memory.id}`}
+                            placeholder="Memory Title"
+                        />
+                        <textarea
+                            defaultValue={memory.content}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-500/50 min-h-[100px]"
+                            id={`edit-content-${memory.id}`}
+                            placeholder="Memory Content"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const titleInput = document.getElementById(`edit-title-${memory.id}`) as HTMLInputElement;
+                                    const contentInput = document.getElementById(`edit-content-${memory.id}`) as HTMLTextAreaElement;
+                                    if (onUpdate && titleInput && contentInput) {
+                                        onUpdate(memory.id, {
+                                            title: titleInput.value,
+                                            content: contentInput.value
+                                        });
+                                        setIsEditing(false);
+                                    }
+                                }}
+                                className="px-3 py-1.5 text-sm bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors shadow-lg shadow-primary-900/20"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    /* Title Row - Always visible at top */
+                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
                         <button
                             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                 e.stopPropagation();
@@ -72,7 +114,7 @@ export default function MemoryCard({
                                 <Circle className="text-slate-400 hover:text-slate-600" size={24} />
                             )}
                         </button>
-                        <h3 className={`font-bold text-lg text-white ${memory.is_completed ? 'line-through opacity-60' : ''}`}>
+                        <h3 className={`font-bold text-xl text-white flex-1 ${memory.is_completed ? 'line-through opacity-60' : ''}`}>
                             {memory.title}
                         </h3>
                         <button
@@ -87,11 +129,34 @@ export default function MemoryCard({
                                 size={20}
                             />
                         </button>
+                        <button
+                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                e.stopPropagation();
+                                setIsEditing(true);
+                            }}
+                            className="text-slate-400 hover:text-blue-400 transition-colors p-2 hover:bg-blue-500/10 rounded-xl"
+                        >
+                            <Pencil size={18} />
+                        </button>
+                        <button
+                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                e.stopPropagation();
+                                if (confirm('Are you sure you want to delete this memory?')) {
+                                    onDelete(memory.id);
+                                }
+                            }}
+                            className="text-slate-400 hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-xl"
+                        >
+                            <Trash2 size={18} />
+                        </button>
                     </div>
+                )}
 
+                {/* Content Area */}
+                <div className="space-y-4">
                     {/* Audio Player */}
                     {memory.audio_url && (
-                        <div className="mb-4">
+                        <div>
                             <AudioPlayer src={memory.audio_url} />
                             {memory.duration && (
                                 <div className="flex items-center gap-2 mt-2 text-sm text-slate-400">
@@ -104,17 +169,17 @@ export default function MemoryCard({
 
                     {/* Image Thumbnail */}
                     {memory.image_url && (
-                        <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                        <div className="rounded-xl overflow-hidden border border-white/10">
                             <img
                                 src={memory.image_url}
                                 alt="Memory attachment"
-                                className="w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                className="w-full h-auto max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => window.open(memory.image_url!, '_blank')}
                             />
                         </div>
                     )}
 
-                    <p className="text-slate-300 leading-relaxed mb-3">{memory.summary}</p>
+                    <p className="text-slate-300 leading-relaxed">{memory.summary}</p>
 
                     {/* Tags */}
                     <div className="flex items-center gap-2 flex-wrap">
@@ -127,16 +192,6 @@ export default function MemoryCard({
                         </span>
                     </div>
                 </div>
-
-                <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        onDelete(memory.id);
-                    }}
-                    className="text-slate-400 hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-xl"
-                >
-                    <Trash2 size={20} />
-                </button>
             </div>
 
             {/* Expandable Content */}
