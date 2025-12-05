@@ -8,10 +8,12 @@ import { generateBriefing } from '@/lib/groq/client';
 
 interface FocusViewProps {
     memories: Memory[];
-    onCompleteTask: (id: string) => void;
+    onToggleFavorite: (id: string) => void;
+    onToggleComplete: (id: string) => void;
+    onDelete: (id: string) => void;
 }
 
-export default function FocusView({ memories, onCompleteTask }: FocusViewProps) {
+export default function FocusView({ memories, onToggleFavorite, onToggleComplete, onDelete }: FocusViewProps) {
     const [briefing, setBriefing] = useState<{ priorityIds: string[], analysis: string } | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -92,7 +94,7 @@ export default function FocusView({ memories, onCompleteTask }: FocusViewProps) 
                                     <p className="text-sm text-slate-400 ml-9">{memory.summary}</p>
                                 </div>
                                 <button
-                                    onClick={() => onCompleteTask(memory.id)}
+                                    onClick={() => onToggleComplete(memory.id)}
                                     className="p-3 hover:bg-emerald-500/20 rounded-xl transition-colors flex-shrink-0 group-hover:scale-110"
                                     title="Complete"
                                 >
@@ -129,7 +131,7 @@ export default function FocusView({ memories, onCompleteTask }: FocusViewProps) 
                                     <p className="text-sm text-slate-500">{memory.summary}</p>
                                 </div>
                                 <button
-                                    onClick={() => onCompleteTask(memory.id)}
+                                    onClick={() => onToggleComplete(memory.id)}
                                     className="p-2 hover:bg-emerald-500/20 rounded-xl transition-colors"
                                 >
                                     <CheckCircle2 size={20} className="text-slate-600 group-hover:text-emerald-400 transition-colors" />
