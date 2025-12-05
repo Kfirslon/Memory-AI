@@ -42,7 +42,6 @@ Deno.serve(async (req) => {
 
         console.log(`✅ User authenticated: ${user.id}`);
 
-        // Check if user already has a subscription
         const { data: subscription, error: subError } = await supabase
             .from("user_subscriptions")
             .select("*")
@@ -55,7 +54,6 @@ Deno.serve(async (req) => {
 
         let stripeCustomerId = subscription?.stripe_customer_id;
 
-        // Create Stripe customer if one doesn't exist
         if (!stripeCustomerId) {
             console.log("🆕 Creating new Stripe customer...");
             const customer = await stripe.customers.create({
@@ -68,7 +66,6 @@ Deno.serve(async (req) => {
             stripeCustomerId = customer.id;
             console.log(`✅ Created Stripe customer: ${customer.id}`);
 
-            // Create initial subscription record
             const { error: insertError } = await supabase
                 .from("user_subscriptions")
                 .insert({
@@ -84,7 +81,6 @@ Deno.serve(async (req) => {
 
         const originUrl = req.headers.get("origin") ?? "http://localhost:3000";
 
-        // If already has active subscription, redirect to billing portal
         if (subscription?.status === "active") {
             console.log("🎯 User has active subscription, creating portal session...");
             const portalSession = await stripe.billingPortal.sessions.create({
@@ -97,7 +93,6 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Create checkout session for new subscribers
         console.log("💳 Creating checkout session...");
         const session = await stripe.checkout.sessions.create({
             customer: stripeCustomerId,

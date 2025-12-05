@@ -49,10 +49,8 @@ Deno.serve(async (req) => {
                 console.log(`✅ Checkout completed for customer: ${session.customer}`);
                 console.log(`Session metadata:`, session.metadata);
 
-                // Get subscription details
                 const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
-                // Update or insert user subscription
                 const { error: upsertError } = await supabase
                     .from("user_subscriptions")
                     .upsert({
@@ -75,12 +73,6 @@ Deno.serve(async (req) => {
                 }
 
                 console.log("✅ Successfully updated user subscription to active");
-
-                // Sync to user_metadata for frontend access
-                await supabase.auth.admin.updateUserById(
-                    session.metadata?.userId as string,
-                    { user_metadata: { subscription_status: 'premium', stripe_customer_id: session.customer } }
-                );
                 break;
             }
 
@@ -88,7 +80,6 @@ Deno.serve(async (req) => {
                 const subscription = event.data.object;
                 console.log(`🆕 Subscription created: ${subscription.id}`);
 
-                // Find user_id from customer
                 const { data: existingSub } = await supabase
                     .from("user_subscriptions")
                     .select("user_id")
@@ -147,7 +138,6 @@ Deno.serve(async (req) => {
                 const invoice = event.data.object;
                 console.log(`💰 Payment succeeded for invoice: ${invoice.id}`);
 
-                // Ensure subscription is marked as active
                 if (invoice.subscription) {
                     await supabase
                         .from("user_subscriptions")
