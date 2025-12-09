@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Memory } from '@/lib/types';
-import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock, Pencil } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Star, Trash2, CheckCircle2, Circle, Clock, Pencil, Bell } from 'lucide-react';
 import AudioPlayer from './AudioPlayer';
 
 interface MemoryCardProps {
@@ -190,6 +190,12 @@ export default function MemoryCard({
                             <Calendar size={14} />
                             {formatDate(memory.created_at)}
                         </span>
+                        {memory.reminder_time && (
+                            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 animate-pulse">
+                                <Bell size={14} />
+                                Reminder: {formatDate(memory.reminder_time)}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

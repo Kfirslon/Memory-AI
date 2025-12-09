@@ -3,11 +3,16 @@
   "short_name": "Memory Tap",
   "description": "AI-powered voice notes that capture and organize your thoughts instantly",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#6366f1",
   "orientation": "portrait-primary",
   "scope": "/",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",

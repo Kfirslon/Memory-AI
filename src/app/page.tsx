@@ -269,6 +269,16 @@ export default function Home() {
         try {
             const result = await processManualEntry(data.content);
 
+            // Convert datetime-local format to ISO timestamp
+            let reminderTimeISO: string | null = null;
+            if (data.reminderTime) {
+                // datetime-local gives format like "2024-12-09T12:55"
+                // Convert to ISO string with timezone
+                const reminderDate = new Date(data.reminderTime);
+                reminderTimeISO = reminderDate.toISOString();
+                console.log('[Memory] Reminder time set:', data.reminderTime, '→', reminderTimeISO);
+            }
+
             const { data: memory, error } = await supabase
                 .from('memories')
                 .insert({
@@ -280,7 +290,7 @@ export default function Home() {
                     audio_url: null,
                     duration: null,
                     image_url: data.imageUrl,
-                    reminder_time: data.reminderTime,
+                    reminder_time: reminderTimeISO,
                     is_favorite: false,
                     is_completed: false,
                 })
@@ -509,7 +519,7 @@ export default function Home() {
                                 exit={{ opacity: 0, x: -20 }}
                                 className="pt-4"
                             >
-                                <div className="space-y-4 sticky top-20 z-10 bg-cosmic-950/95 backdrop-blur-xl pb-4">
+                                <div className="space-y-4 sticky top-18 z-10 bg-cosmic-950/95 backdrop-blur-xl pb-2">
                                     <div className="relative w-full group">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-400 transition-colors" size={20} />
                                         <input
@@ -537,7 +547,7 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pb-8">
+                                <div className="space-y-4 pt-4 pb-8">
                                     {filteredMemories.length === 0 ? (
                                         <div className="text-center py-16 text-slate-400">
                                             <p className="text-lg">No memories found</p>
