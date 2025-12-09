@@ -22,6 +22,7 @@ export interface ProcessingResult {
     summary: string;
     title: string;
     category: MemoryCategory;
+    reminderTime?: string;
 }
 
 export interface User {

@@ -240,6 +240,7 @@ export default function Home() {
                     category: result.category,
                     audio_url: audioUrl,
                     duration: Math.round(audioDuration * 10) / 10,
+                    reminder_time: result.reminderTime || null,
                     is_favorite: false,
                     is_completed: false,
                 })
@@ -249,7 +250,32 @@ export default function Home() {
             if (error) throw error;
 
             setMemories((prev) => [data, ...prev]);
-            toast('Memory saved successfully!');
+
+            // Sync to Google Calendar if voice recording set a reminder
+            if (result.reminderTime) {
+                console.log('[Voice] AI extracted reminder time:', result.reminderTime);
+                try {
+                    await fetch('/api/calendar/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            memoryId: data.id,
+                            title: result.title,
+                            content: result.summary,
+                            reminderTime: result.reminderTime,
+                        }),
+                    });
+                    console.log('[Calendar] Synced voice reminder to Google Calendar');
+                    toast('Memory saved with reminder!');
+                } catch (calError) {
+                    console.log('[Calendar] Voice reminder not synced (calendar not connected)');
+                    toast('Memory saved successfully!');
+                }
+            } else {
+                toast('Memory saved successfully!');
+            }
+
             setActiveTab('timeline');
         } catch (error: any) {
             console.error('Processing error:', error);

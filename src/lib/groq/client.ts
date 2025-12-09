@@ -28,8 +28,12 @@ export async function transcribeAudio(file: File): Promise<string> {
 /**
  * Process transcription using Groq Llama to extract intelligence
  */
-export async function processTranscription(transcription: string): Promise<Omit<ProcessingResult, 'transcription'>> {
+export async function processTranscription(transcription: string): Promise<Omit<ProcessingResult, 'transcription'> & { reminderTime?: string }> {
     try {
+        // Get current time for relative time calculations
+        const now = new Date();
+        const currentTimeInfo = `Current date/time: ${now.toISOString()} (${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${now.toLocaleTimeString('en-US')})`;
+
         const completion = await groq.chat.completions.create({
             messages: [
                 {
@@ -39,15 +43,26 @@ export async function processTranscription(transcription: string): Promise<Omit<
 2. A short, catchy title (max 5 words)
 3. Category: 'task', 'reminder', 'idea', or 'note'
    - Use 'task' for actionable items
-   - Use 'reminder' for time-sensitive notes
+   - Use 'reminder' for time-sensitive notes or when user says "remind me"
    - Use 'idea' for creative thoughts or suggestions
    - Use 'note' for general information
+4. **IMPORTANT**: If the user mentions a time for a reminder (e.g., "remind me at 5pm", "in 2 hours", "tomorrow morning", "next Monday at 3pm"), extract the exact datetime.
+
+${currentTimeInfo}
+
+Convert any mentioned time to ISO 8601 format (e.g., "2024-12-09T17:00:00.000Z").
+- "at 5pm" means today at 5pm
+- "in 2 hours" means 2 hours from now
+- "tomorrow at 9am" means tomorrow at 9am
+- "next Monday" means the coming Monday
+- If no specific time mentioned but it's a reminder, set reminderTime to null
 
 Respond ONLY with valid JSON in this exact format:
 {
   "summary": "...",
   "title": "...",
-  "category": "task|reminder|idea|note"
+  "category": "task|reminder|idea|note",
+  "reminderTime": "2024-12-09T17:00:00.000Z" or null
 }`,
                 },
                 {
@@ -57,7 +72,7 @@ Respond ONLY with valid JSON in this exact format:
             ],
             model: 'llama-3.3-70b-versatile',
             temperature: 0.3,
-            max_tokens: 200,
+            max_tokens: 300,
             response_format: { type: 'json_object' },
         });
 
@@ -65,11 +80,13 @@ Respond ONLY with valid JSON in this exact format:
         if (!responseText) throw new Error('No response from Groq');
 
         const parsed = JSON.parse(responseText);
+        console.log('[GROQ] Parsed response:', parsed);
 
         return {
             summary: parsed.summary,
             title: parsed.title,
             category: parsed.category as MemoryCategory,
+            reminderTime: parsed.reminderTime || undefined,
         };
     } catch (error) {
         console.error('Groq processing error:', error);
