@@ -13,6 +13,7 @@ import MemoryCard from '@/components/MemoryCard';
 import FocusView from '@/components/FocusView';
 import AnalyticsView from '@/components/AnalyticsView';
 import ManualMemoryForm from '@/components/ManualMemoryForm';
+import GoogleCalendarSettings from '@/components/GoogleCalendarSettings';
 
 type Tab = 'capture' | 'timeline' | 'focus' | 'analytics' | 'profile';
 type InputMode = 'voice' | 'manual';
@@ -300,6 +301,27 @@ export default function Home() {
             if (error) throw error;
 
             setMemories((prev) => [memory, ...prev]);
+
+            // Sync to Google Calendar if reminder is set
+            if (reminderTimeISO) {
+                try {
+                    await fetch('/api/calendar/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            memoryId: memory.id,
+                            title: data.title,
+                            content: data.content,
+                            reminderTime: reminderTimeISO,
+                        }),
+                    });
+                    console.log('[Calendar] Synced reminder to Google Calendar');
+                } catch (calError) {
+                    console.log('[Calendar] Not synced (calendar not connected or sync disabled)');
+                }
+            }
+
             toast('Memory saved successfully!');
             setActiveTab('timeline');
             setInputMode('voice');
@@ -617,6 +639,9 @@ export default function Home() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Google Calendar Settings */}
+                                <GoogleCalendarSettings userId={user.id} />
 
                                 <button
                                     onClick={handleUpgrade}
