@@ -40,38 +40,43 @@ export async function processTranscription(transcription: string): Promise<Omit<
         const utcOffsetMs = now.getTime() - userTime.getTime();
         const utcOffsetHours = -utcOffsetMs / (1000 * 60 * 60);
         
-        const currentTimeInfo = `Current date/time: ${now.toISOString()} UTC (User timezone: ${userTimezone}, UTC offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours}). User's local time: ${userTime.toLocaleString('en-US')}`;
+        const currentLocalTime = now.toLocaleString('en-US', { timeZone: userTimezone, hour12: false });
+        const currentTimeInfo = `Current UTC time: ${now.toISOString()}\nUser's timezone: ${userTimezone}\nUTC offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours} hours\nUser's current local time: ${currentLocalTime}`;
 
         const completion = await groq.chat.completions.create({
             messages: [
                 {
                     role: 'system',
-                    content: `You are an intelligent personal assistant. Analyze the text and extract:
-1. A concise summary (max 2 sentences)
-2. A short, catchy title (max 5 words)
-3. Category: 'task', 'reminder', 'idea', or 'note'
-   - Use 'task' for actionable items
-   - Use 'reminder' for time-sensitive notes or when user says "remind me"
-   - Use 'idea' for creative thoughts or suggestions
-   - Use 'note' for general information
-4. **IMPORTANT**: If the user mentions a time for a reminder (e.g., "remind me at 5pm", "in 2 hours", "tomorrow morning", "next Monday at 3pm"), extract the exact datetime.
+                    content: `You are an intelligent personal assistant specialized in parsing time expressions. Your job is to extract reminder times accurately.
 
+CONTEXT:
 ${currentTimeInfo}
 
-**CRITICAL**: The user's times are in their LOCAL timezone (${userTimezone}). Convert all times to ISO 8601 UTC format.
-- "at 5pm" means 5pm TODAY in user's LOCAL timezone → convert to UTC
-- "in 2 hours" means 2 hours from NOW (use the user's current local time)
-- "tomorrow at 9am" means tomorrow at 9am in user's LOCAL timezone → convert to UTC
-- "next Monday" means the coming Monday in user's timezone
-- Apply UTC offset of ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours} hours when converting to UTC
-- If no specific time mentioned but it's a reminder, set reminderTime to null
+RULES FOR TIME PARSING:
+1. "at 11:30" or "11.30" or "11 30" = 11:30 AM TODAY in user's LOCAL timezone
+2. "in 2 hours" = add 2 hours to user's current local time
+3. "tomorrow at 9am" = tomorrow at 9:00 AM in user's LOCAL timezone
+4. "next Monday" = coming Monday at midnight in user's LOCAL timezone
+5. Always convert user's LOCAL time to UTC using offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours}
 
-Respond ONLY with valid JSON in this exact format:
+EXAMPLES:
+- User says "remind me at 2pm" and it's currently 10:00am in EST (UTC-5)
+  → 2pm EST = 19:00 UTC → "2025-12-10T19:00:00.000Z"
+- User says "remind me in 3 hours" and it's currently 10:00am in EST
+  → 1pm EST = 18:00 UTC → "2025-12-10T18:00:00.000Z"
+
+TASK: Extract from the user's message:
+1. Summary (max 2 sentences)
+2. Title (max 5 words)
+3. Category: 'task', 'reminder', 'idea', or 'note'
+4. Reminder time if mentioned, else null
+
+Respond ONLY with valid JSON:
 {
-  "summary": "...",
-  "title": "...",
+  "summary": "string",
+  "title": "string",
   "category": "task|reminder|idea|note",
-  "reminderTime": "2024-12-09T17:00:00.000Z" or null
+  "reminderTime": "ISO8601 UTC string or null"
 }`,
                 },
                 {
