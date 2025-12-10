@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, BrainCircuit, Mic, Sparkles, User as UserIcon, LogOut, Edit3 } from 'lucide-react';
+import { Search, BrainCircuit, Mic, Sparkles, User as UserIcon, LogOut, Edit3, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { processAudio, processManualEntry } from '@/lib/groq/client';
 import { uploadAudioToCloudinary } from '@/lib/cloudinary';
@@ -71,6 +71,45 @@ export default function Home() {
         if (user) {
             loadMemories();
             loadSubscription();
+        }
+    }, [user]);
+
+    useEffect(() => {
+        // Reload subscription when returning from Stripe checkout
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const success = params.get('success');
+            const canceled = params.get('canceled');
+            
+            if (success === 'true' || canceled === 'true') {
+                // Reload subscription data multiple times to ensure webhook processed
+                const timer1 = setTimeout(() => {
+                    if (user) {
+                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 1)...');
+                        loadSubscription();
+                    }
+                }, 500);
+                
+                const timer2 = setTimeout(() => {
+                    if (user) {
+                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 2)...');
+                        loadSubscription();
+                    }
+                }, 1500);
+
+                const timer3 = setTimeout(() => {
+                    if (user) {
+                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 3)...');
+                        loadSubscription();
+                    }
+                }, 3000);
+
+                return () => {
+                    clearTimeout(timer1);
+                    clearTimeout(timer2);
+                    clearTimeout(timer3);
+                };
+            }
         }
     }, [user]);
 
@@ -669,13 +708,25 @@ export default function Home() {
                                 {/* Google Calendar Settings */}
                                 <GoogleCalendarSettings userId={user.id} />
 
-                                <button
-                                    onClick={handleUpgrade}
-                                    className="w-full glass-card border-primary-500/20 text-primary-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-500/10 transition-colors"
-                                >
-                                    <Sparkles size={20} />
-                                    {isPremium ? 'Manage Subscription' : 'Upgrade to Premium'}
-                                </button>
+                                <div className="space-y-3">
+                                    {isPremium ? (
+                                        <button
+                                            onClick={handleUpgrade}
+                                            className="w-full glass-card border-emerald-500/20 bg-emerald-500/5 text-emerald-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-colors"
+                                        >
+                                            <Check size={20} />
+                                            Switch to Manage
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleUpgrade}
+                                            className="w-full glass-card border-primary-500/20 bg-primary-500/5 text-primary-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-500/10 transition-colors"
+                                        >
+                                            <Sparkles size={20} />
+                                            Switch to Premium
+                                        </button>
+                                    )}
+                                </div>
 
                                 <button
                                     onClick={handleLogout}

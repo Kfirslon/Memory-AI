@@ -1,0 +1,9 @@
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.create-stripe-session]
+verify_jwt = true
+
+[functions.send-push-notifications]
+verify_jwt = true
+
