@@ -34,14 +34,35 @@ export async function processTranscription(transcription: string): Promise<Omit<
         const now = new Date();
         const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         
-        // Get current time in user's timezone
-        const userTimeString = now.toLocaleString('en-US', { timeZone: userTimezone });
-        const userTime = new Date(userTimeString);
-        const utcOffsetMs = now.getTime() - userTime.getTime();
-        const utcOffsetHours = -utcOffsetMs / (1000 * 60 * 60);
+        // Calculate UTC offset correctly
+        // Get a date in user's timezone
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: userTimezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
         
-        const currentLocalTime = now.toLocaleString('en-US', { timeZone: userTimezone, hour12: false });
-        const currentTimeInfo = `Current UTC time: ${now.toISOString()}\nUser's timezone: ${userTimezone}\nUTC offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours} hours\nUser's current local time: ${currentLocalTime}`;
+        const parts = formatter.formatToParts(now);
+        const localDate = new Date(
+            parseInt(parts.find(p => p.type === 'year')?.value || '2025'),
+            parseInt(parts.find(p => p.type === 'month')?.value || '1') - 1,
+            parseInt(parts.find(p => p.type === 'day')?.value || '1'),
+            parseInt(parts.find(p => p.type === 'hour')?.value || '0'),
+            parseInt(parts.find(p => p.type === 'minute')?.value || '0'),
+            parseInt(parts.find(p => p.type === 'second')?.value || '0')
+        );
+        
+        // UTC offset in hours (positive = ahead of UTC, negative = behind)
+        const utcOffsetMinutes = (localDate.getTime() - now.getTime()) / (1000 * 60);
+        const utcOffsetHours = utcOffsetMinutes / 60;
+        
+        const currentLocalTime = formatter.format(now);
+        const currentTimeInfo = `Current UTC time: ${now.toISOString()}\nUser's timezone: ${userTimezone}\nUTC offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours.toFixed(1)} hours\nUser's current local time: ${currentLocalTime}`;
 
         const completion = await groq.chat.completions.create({
             messages: [
@@ -52,18 +73,22 @@ export async function processTranscription(transcription: string): Promise<Omit<
 CONTEXT:
 ${currentTimeInfo}
 
-RULES FOR TIME PARSING:
-1. "at 11:30" or "11.30" or "11 30" = 11:30 AM TODAY in user's LOCAL timezone
-2. "in 2 hours" = add 2 hours to user's current local time
+CONVERSION RULE:
+To convert user's LOCAL time to UTC:
+- If user says "1pm" and UTC offset is -5: 1pm - (-5) = 1pm + 5 hours = 6pm UTC
+- Formula: LOCAL_TIME + UTC_OFFSET = UTC_TIME
+- Example: 1:00 PM local with offset -5 → 1:00 PM + 5 hours = 18:00 UTC → "2025-12-10T18:00:00.000Z"
+
+TIME PARSING RULES:
+1. "at 1pm" or "1pm" or "1.00" = 1:00 PM TODAY in user's LOCAL timezone
+2. "in 2 hours" = add 2 hours to user's current local time (${currentLocalTime})
 3. "tomorrow at 9am" = tomorrow at 9:00 AM in user's LOCAL timezone
-4. "next Monday" = coming Monday at midnight in user's LOCAL timezone
-5. Always convert user's LOCAL time to UTC using offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours}
+4. Always convert final time to UTC format using: LOCAL_TIME + ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours.toFixed(1)}
 
 EXAMPLES:
-- User says "remind me at 2pm" and it's currently 10:00am in EST (UTC-5)
-  → 2pm EST = 19:00 UTC → "2025-12-10T19:00:00.000Z"
-- User says "remind me in 3 hours" and it's currently 10:00am in EST
-  → 1pm EST = 18:00 UTC → "2025-12-10T18:00:00.000Z"
+If user's timezone offset is -5 (EST):
+- "1pm today" → 1:00 PM local → 1:00 + 5 = 18:00 UTC → "2025-12-10T18:00:00.000Z"
+- "in 3 hours" and current local time is 10:00 AM → 1:00 PM local → 1:00 + 5 = 18:00 UTC
 
 TASK: Extract from the user's message:
 1. Summary (max 2 sentences)
