@@ -82,33 +82,13 @@ export default function Home() {
             const canceled = params.get('canceled');
             
             if (success === 'true' || canceled === 'true') {
-                // Reload subscription data multiple times to ensure webhook processed
-                const timer1 = setTimeout(() => {
+                // Single refresh after webhook processes
+                const timer = setTimeout(() => {
                     if (user) {
-                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 1)...');
-                        loadSubscription();
-                    }
-                }, 500);
-                
-                const timer2 = setTimeout(() => {
-                    if (user) {
-                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 2)...');
                         loadSubscription();
                     }
                 }, 1500);
-
-                const timer3 = setTimeout(() => {
-                    if (user) {
-                        console.log('🔄 Refreshing subscription after Stripe redirect (attempt 3)...');
-                        loadSubscription();
-                    }
-                }, 3000);
-
-                return () => {
-                    clearTimeout(timer1);
-                    clearTimeout(timer2);
-                    clearTimeout(timer3);
-                };
+                return () => clearTimeout(timer);
             }
         }
     }, [user]);
