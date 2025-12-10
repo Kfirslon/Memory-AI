@@ -32,7 +32,15 @@ export async function processTranscription(transcription: string): Promise<Omit<
     try {
         // Get current time for relative time calculations
         const now = new Date();
-        const currentTimeInfo = `Current date/time: ${now.toISOString()} (${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${now.toLocaleTimeString('en-US')})`;
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Get current time in user's timezone
+        const userTimeString = now.toLocaleString('en-US', { timeZone: userTimezone });
+        const userTime = new Date(userTimeString);
+        const utcOffsetMs = now.getTime() - userTime.getTime();
+        const utcOffsetHours = -utcOffsetMs / (1000 * 60 * 60);
+        
+        const currentTimeInfo = `Current date/time: ${now.toISOString()} UTC (User timezone: ${userTimezone}, UTC offset: ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours}). User's local time: ${userTime.toLocaleString('en-US')}`;
 
         const completion = await groq.chat.completions.create({
             messages: [
@@ -50,11 +58,12 @@ export async function processTranscription(transcription: string): Promise<Omit<
 
 ${currentTimeInfo}
 
-Convert any mentioned time to ISO 8601 format (e.g., "2024-12-09T17:00:00.000Z").
-- "at 5pm" means today at 5pm
-- "in 2 hours" means 2 hours from now
-- "tomorrow at 9am" means tomorrow at 9am
-- "next Monday" means the coming Monday
+**CRITICAL**: The user's times are in their LOCAL timezone (${userTimezone}). Convert all times to ISO 8601 UTC format.
+- "at 5pm" means 5pm TODAY in user's LOCAL timezone → convert to UTC
+- "in 2 hours" means 2 hours from NOW (use the user's current local time)
+- "tomorrow at 9am" means tomorrow at 9am in user's LOCAL timezone → convert to UTC
+- "next Monday" means the coming Monday in user's timezone
+- Apply UTC offset of ${utcOffsetHours > 0 ? '+' : ''}${utcOffsetHours} hours when converting to UTC
 - If no specific time mentioned but it's a reminder, set reminderTime to null
 
 Respond ONLY with valid JSON in this exact format:
