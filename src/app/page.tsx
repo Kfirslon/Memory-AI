@@ -695,7 +695,7 @@ export default function Home() {
                                             className="w-full glass-card border-emerald-500/20 bg-emerald-500/5 text-emerald-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-500/10 transition-colors"
                                         >
                                             <Check size={20} />
-                                            Switch to Manage
+                                            Manage Subscription
                                         </button>
                                     ) : (
                                         <button
@@ -703,7 +703,7 @@ export default function Home() {
                                             className="w-full glass-card border-primary-500/20 bg-primary-500/5 text-primary-400 font-semibold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-500/10 transition-colors"
                                         >
                                             <Sparkles size={20} />
-                                            Switch to Premium
+                                            Upgrade to Pro
                                         </button>
                                     )}
                                 </div>
